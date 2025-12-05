@@ -1,0 +1,73 @@
+{
+  "channels": [
+    {
+      "name": "Cyber Threat Intel",
+      "username": "@cyberthreatintel",
+      "category": "general"
+    },
+    {
+      "name": "Malware Research",
+      "username": "@malware_research",
+      "category": "malware"
+    },
+    {
+      "name": "CVE Alerts",
+      "username": "@cve_alerts",
+      "category": "vulnerabilities"
+    },
+    {
+      "name": "Ransomware Feeds",
+      "username": "@ransomware_feeds",
+      "category": "ransomware"
+    },
+     {
+                "name": "Cyber Security News & Updates",
+                "username": "cybersecuritynews",
+                "category": "news",
+                "description": "Latest cybersecurity news and updates"
+                
+            },
+            {
+                "name": "Malware & Threat Research",
+                "username": "malwareresearch", 
+                "category": "malware"
+                
+            },
+            {
+                "name": "InfoSec News",
+                "username": "infosecnews",
+                "category": "news"
+                
+            },
+            {
+                "name": "Cyber Threat Intelligence",
+                "username": "threathunting",
+                "category": "intelligence"
+                
+            },
+            {
+                "name": "OSINT Community",
+                "username": "osintcommunity",
+                "category": "osint"
+                
+            },
+            {
+                "name": "Ransomware Tracking",
+                "username": "ransomwarefeed",
+                "category": "ransomware"
+                
+            },
+            {
+                "name": "Vulnerability Research",
+                "username": "vulnresearch",
+                "category": "vulnerabilities"
+                
+            },
+            {
+                "name": "Digital Forensics",
+                "username": "digitalforensics",
+                "category": "forensics" 
+                
+            }
+  ]
+}

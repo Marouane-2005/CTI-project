@@ -1,0 +1,13 @@
+{
+  "api_key": "2270bc56efbaad5d916046b7fe7b4c0d453a789110df5e6c69c4a68cb4aaf461",
+  "pulses_to_monitor": [],
+  "indicators_types": [
+    "IPv4",
+    "domain",
+    "hostname",
+    "URL",
+    "FileHash-MD5",
+    "FileHash-SHA1",
+    "FileHash-SHA256"
+  ]
+}

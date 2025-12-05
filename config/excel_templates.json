@@ -1,0 +1,295 @@
+{
+  "templates": {
+    "cve_report": {
+      "name": "CVE Security Report",
+      "filename": "CVE_Report_{date}.xlsx",
+      "sheets": {
+        "Summary": {
+          "columns": [
+            {"name": "Metric", "width": 25},
+            {"name": "Value", "width": 15},
+            {"name": "Status", "width": 15},
+            {"name": "Trend", "width": 15}
+          ],
+          "summary_data": [
+            "Total CVEs Found",
+            "Critical Vulnerabilities",
+            "High Priority CVEs",
+            "Medium Priority CVEs",
+            "Low Priority CVEs",
+            "CVEs with Exploit Available",
+            "CVEs affecting our assets",
+            "Average CVSS Score"
+          ]
+        },
+        "Critical_CVEs": {
+          "columns": [
+            {"name": "CVE-ID", "width": 15},
+            {"name": "Description", "width": 50},
+            {"name": "CVSS Score", "width": 12},
+            {"name": "Severity", "width": 12},
+            {"name": "Published Date", "width": 15},
+            {"name": "Affected Products", "width": 30},
+            {"name": "Exploit Available", "width": 15},
+            {"name": "Patch Available", "width": 15},
+            {"name": "Risk Level", "width": 15},
+            {"name": "Recommendations", "width": 40}
+          ],
+          "filters": {
+            "cvss_score": ">=9.0",
+            "severity": "CRITICAL"
+          }
+        },
+        "High_Priority_CVEs": {
+          "columns": [
+            {"name": "CVE-ID", "width": 15},
+            {"name": "Description", "width": 50},
+            {"name": "CVSS Score", "width": 12},
+            {"name": "Severity", "width": 12},
+            {"name": "Published Date", "width": 15},
+            {"name": "Affected Products", "width": 30},
+            {"name": "Exploit Available", "width": 15},
+            {"name": "Risk Level", "width": 15},
+            {"name": "Action Required", "width": 30}
+          ],
+          "filters": {
+            "cvss_score": ">=7.0",
+            "severity": "HIGH"
+          }
+        },
+        "All_CVEs": {
+          "columns": [
+            {"name": "CVE-ID", "width": 15},
+            {"name": "Description", "width": 40},
+            {"name": "CVSS Score", "width": 12},
+            {"name": "Severity", "width": 12},
+            {"name": "Published Date", "width": 15},
+            {"name": "Modified Date", "width": 15},
+            {"name": "Affected Products", "width": 25},
+            {"name": "Vector", "width": 15},
+            {"name": "Source", "width": 20}
+          ]
+        }
+      },
+      "styling": {
+        "header_color": "366092",
+        "critical_color": "DC143C",
+        "high_color": "FF6347",
+        "medium_color": "FFA500",
+        "low_color": "32CD32",
+        "font_name": "Arial",
+        "font_size": 10,
+        "header_font_size": 11
+      }
+    },
+    "ioc_report": {
+      "name": "IoC Threat Intelligence Report",
+      "filename": "IoC_Report_{date}.xlsx",
+      "sheets": {
+        "Summary": {
+          "columns": [
+            {"name": "Indicator Type", "width": 20},
+            {"name": "Count", "width": 12},
+            {"name": "Malicious", "width": 12},
+            {"name": "Suspicious", "width": 12},
+            {"name": "Clean", "width": 12},
+            {"name": "Unknown", "width": 12}
+          ]
+        },
+        "IP_Addresses": {
+          "columns": [
+            {"name": "IP Address", "width": 15},
+            {"name": "Reputation", "width": 15},
+            {"name": "Confidence", "width": 12},
+            {"name": "Country", "width": 15},
+            {"name": "ASN", "width": 15},
+            {"name": "First Seen", "width": 15},
+            {"name": "Last Seen", "width": 15},
+            {"name": "Threat Types", "width": 25},
+            {"name": "Source", "width": 20},
+            {"name": "OpenCTI ID", "width": 25}
+          ]
+        },
+        "Domains": {
+          "columns": [
+            {"name": "Domain", "width": 25},
+            {"name": "Reputation", "width": 15},
+            {"name": "Confidence", "width": 12},
+            {"name": "Creation Date", "width": 15},
+            {"name": "Registrar", "width": 20},
+            {"name": "First Seen", "width": 15},
+            {"name": "Last Seen", "width": 15},
+            {"name": "Threat Types", "width": 25},
+            {"name": "Source", "width": 20},
+            {"name": "OpenCTI ID", "width": 25}
+          ]
+        },
+        "URLs": {
+          "columns": [
+            {"name": "URL", "width": 40},
+            {"name": "Reputation", "width": 15},
+            {"name": "Confidence", "width": 12},
+            {"name": "First Seen", "width": 15},
+            {"name": "Last Seen", "width": 15},
+            {"name": "Threat Types", "width": 25},
+            {"name": "Source", "width": 20},
+            {"name": "OpenCTI ID", "width": 25}
+          ]
+        },
+        "File_Hashes": {
+          "columns": [
+            {"name": "Hash", "width": 35},
+            {"name": "Hash Type", "width": 12},
+            {"name": "Reputation", "width": 15},
+            {"name": "Confidence", "width": 12},
+            {"name": "File Name", "width": 25},
+            {"name": "File Size", "width": 12},
+            {"name": "First Seen", "width": 15},
+            {"name": "Last Seen", "width": 15},
+            {"name": "Malware Family", "width": 20},
+            {"name": "Source", "width": 20},
+            {"name": "OpenCTI ID", "width": 25}
+          ]
+        }
+      },
+      "styling": {
+        "header_color": "2E8B57",
+        "malicious_color": "DC143C",
+        "suspicious_color": "FF6347",
+        "clean_color": "32CD32",
+        "unknown_color": "D3D3D3",
+        "font_name": "Arial",
+        "font_size": 10
+      }
+    },
+    "threat_landscape": {
+      "name": "Threat Landscape Report",
+      "filename": "Threat_Landscape_{date}.xlsx",
+      "sheets": {
+        "Executive_Summary": {
+          "columns": [
+            {"name": "Category", "width": 25},
+            {"name": "Description", "width": 50},
+            {"name": "Impact Level", "width": 15},
+            {"name": "Trend", "width": 15}
+          ]
+        },
+        "APT_Groups": {
+          "columns": [
+            {"name": "APT Group", "width": 20},
+            {"name": "Aliases", "width": 25},
+            {"name": "Attribution", "width": 15},
+            {"name": "Primary Targets", "width": 25},
+            {"name": "TTPs", "width": 30},
+            {"name": "Recent Activity", "width": 15},
+            {"name": "Threat Level", "width": 15},
+            {"name": "OpenCTI ID", "width": 25}
+          ]
+        },
+        "Malware_Families": {
+          "columns": [
+            {"name": "Malware Family", "width": 20},
+            {"name": "Type", "width": 15},
+            {"name": "Platform", "width": 15},
+            {"name": "Capabilities", "width": 30},
+            {"name": "Distribution Method", "width": 25},
+            {"name": "First Seen", "width": 15},
+            {"name": "Activity Level", "width": 15},
+            {"name": "OpenCTI ID", "width": 25}
+          ]
+        },
+        "Attack_Patterns": {
+          "columns": [
+            {"name": "MITRE ATT&CK ID", "width": 15},
+            {"name": "Technique Name", "width": 25},
+            {"name": "Tactic", "width": 15},
+            {"name": "Platform", "width": 15},
+            {"name": "Usage Frequency", "width": 15},
+            {"name": "Detection Difficulty", "width": 18},
+            {"name": "Related Groups", "width": 25},
+            {"name": "OpenCTI ID", "width": 25}
+          ]
+        }
+      },
+      "styling": {
+        "header_color": "4B0082",
+        "high_threat_color": "DC143C",
+        "medium_threat_color": "FF6347",
+        "low_threat_color": "32CD32",
+        "font_name": "Arial",
+        "font_size": 10
+      }
+    }
+  },
+  "charts": {
+    "cve_severity_pie": {
+      "type": "pie",
+      "title": "CVE Distribution by Severity",
+      "data_source": "Summary.Severity"
+    },
+    "monthly_cve_trend": {
+      "type": "line",
+      "title": "Monthly CVE Trend",
+      "data_source": "All_CVEs.Published_Date"
+    },
+    "ioc_type_distribution": {
+      "type": "bar",
+      "title": "IoC Types Distribution",
+      "data_source": "Summary.Indicator_Type"
+    },
+    "threat_actor_activity": {
+      "type": "heatmap",
+      "title": "Threat Actor Activity Timeline",
+      "data_source": "APT_Groups.Recent_Activity"
+    }
+  },
+  "opencti_integration": {
+    "entity_mappings": {
+      "cve": {
+        "opencti_type": "Vulnerability",
+        "identifier_field": "cve_id",
+        "update_field": "modified_date"
+      },
+      "ioc_ip": {
+        "opencti_type": "IPv4-Addr",
+        "identifier_field": "value",
+        "update_field": "last_seen"
+      },
+      "ioc_domain": {
+        "opencti_type": "Domain-Name",
+        "identifier_field": "value",
+        "update_field": "last_seen"
+      },
+      "ioc_url": {
+        "opencti_type": "Url",
+        "identifier_field": "value",
+        "update_field": "last_seen"
+      },
+      "ioc_hash": {
+        "opencti_type": "StixFile",
+        "identifier_field": "hashes",
+        "update_field": "last_seen"
+      },
+      "malware": {
+        "opencti_type": "Malware",
+        "identifier_field": "name",
+        "update_field": "modified"
+      },
+      "threat_actor": {
+        "opencti_type": "Threat-Actor",
+        "identifier_field": "name",
+        "update_field": "modified"
+      }
+    },
+    "export_formats": {
+      "stix2": {
+        "enabled": true,
+        "bundle_objects": true
+      },
+      "misp": {
+        "enabled": true,
+        "event_info": "CTI Report - {date}"
+      }
+    }
+  }
+}

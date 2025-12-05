@@ -1,0 +1,53 @@
+# Framework Flask
+Flask
+Flask-SocketIO
+Flask-CORS
+
+# Base de données
+psycopg2-binary
+SQLAlchemy
+alembic
+
+
+reportlab==4.0.4
+jinja2==3.1.2
+# Cache et messaging
+redis
+celery
+
+# Sérialisation et données
+requests
+pandas
+numpy
+python-dateutil
+
+# Logging et monitoring
+python-json-logger
+
+# Sécurité et authentification
+PyJWT
+bcrypt==4.2.0
+Flask-JWT-Extended==4.7.1
+
+# WebSocket et temps réel
+python-socketio
+eventlet
+
+# Utilitaires
+python-dotenv==1.0.1
+pyyaml
+click
+
+# Analyse et enrichissement
+yara-python
+dnspython
+python-whois
+
+# OpenCTI integration
+pycti
+
+# Développement et tests
+pytest
+pytest-flask
+pytest-mock
+Pillow==10.0.0

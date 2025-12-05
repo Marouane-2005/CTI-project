@@ -1,0 +1,333 @@
+version: '3.8'
+
+services:
+  # ========================
+  # Infrastructure Services
+  # ========================
+  
+  redis:
+    image: redis:8.0.3
+    container_name: opencti-redis
+    restart: always
+    volumes:
+      - redisdata:/data
+    networks:
+      - opencti-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.18.3
+    container_name: opencti-elasticsearch
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    environment:
+      - discovery.type=single-node
+      - xpack.ml.enabled=false
+      - xpack.security.enabled=false
+      - thread_pool.search.queue_size=5000
+      - logger.org.elasticsearch.discovery="ERROR"
+      - "ES_JAVA_OPTS=-Xms${ELASTIC_MEMORY_SIZE:-1G} -Xmx${ELASTIC_MEMORY_SIZE:-1G}"
+    restart: always
+    networks:
+      - opencti-network
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://elasticsearch:9200/_cluster/health?wait_for_status=yellow >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 50
+
+  minio:
+    image: minio/minio:RELEASE.2025-01-13T11-33-47Z
+    container_name: opencti-minio
+    volumes:
+      - s3data:/data
+    ports:
+      - "9000:9000"  # Port API corrigé
+      - "9001:9001"  # Port console
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-opencti}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-ChangeMe123!}    
+    command: server /data --console-address ":9001"
+    restart: always
+    networks:
+      - opencti-network
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  rabbitmq:
+    image: rabbitmq:4.1-management
+    container_name: opencti-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-opencti}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-ChangeMe123!}
+      - RABBITMQ_NODENAME=rabbit01@localhost
+    volumes:
+      - type: bind
+        source: ./rabbitmq.conf
+        target: /etc/rabbitmq/rabbitmq.conf 
+      - amqpdata:/var/lib/rabbitmq
+    ports:
+      - "15672:15672"  # Management UI
+      - "5672:5672"    # AMQP port ajouté
+    restart: always
+    networks:
+      - opencti-network
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  # ========================
+  # OpenCTI Core Platform
+  # ========================
+  
+  opencti:
+    image: opencti/platform:6.7.5
+    container_name: opencti-platform
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=8096
+      - APP__PORT=8080
+      - APP__BASE_URL=${OPENCTI_BASE_URL:-http://localhost:8082}
+      - APP__ADMIN__EMAIL=${OPENCTI_ADMIN_EMAIL:-admin@opencti.io}
+      - APP__ADMIN__PASSWORD=${OPENCTI_ADMIN_PASSWORD:-admin123}
+      - APP__ADMIN__TOKEN=${OPENCTI_ADMIN_TOKEN:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f90}
+      - APP__APP_LOGS__LOGS_LEVEL=error
+      - REDIS__HOSTNAME=redis
+      - REDIS__PORT=6379
+      - ELASTICSEARCH__URL=http://elasticsearch:9200
+      - ELASTICSEARCH__NUMBER_OF_REPLICAS=0
+      - MINIO__ENDPOINT=minio
+      - MINIO__PORT=9000
+      - MINIO__USE_SSL=false
+      - MINIO__ACCESS_KEY=${MINIO_ROOT_USER:-opencti}
+      - MINIO__SECRET_KEY=${MINIO_ROOT_PASSWORD:-ChangeMe123!}
+      - RABBITMQ__HOSTNAME=rabbitmq
+      - RABBITMQ__PORT=5672
+      - RABBITMQ__PORT_MANAGEMENT=15672
+      - RABBITMQ__MANAGEMENT_SSL=false
+      - RABBITMQ__USERNAME=${RABBITMQ_DEFAULT_USER:-opencti}
+      - RABBITMQ__PASSWORD=${RABBITMQ_DEFAULT_PASS:-ChangeMe123!}
+      - SMTP__HOSTNAME=${SMTP_HOSTNAME:-localhost}
+      - SMTP__PORT=25
+      - PROVIDERS__LOCAL__STRATEGY=LocalStrategy
+      - APP__HEALTH_ACCESS_KEY=${OPENCTI_HEALTHCHECK_ACCESS_KEY:-healthcheck-key-123}
+    ports:
+      - "8082:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: always
+    networks:
+      - opencti-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://opencti:8080/health?health_access_key=${OPENCTI_HEALTHCHECK_ACCESS_KEY:-healthcheck-key-123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  # ========================
+  # OpenCTI Workers
+  # ========================
+  
+  worker-1:
+    image: opencti/worker:6.7.5
+    container_name: opencti-worker-1
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f90}
+      - WORKER_LOG_LEVEL=info
+    depends_on:
+      opencti:
+        condition: service_healthy
+    restart: always
+    networks:
+      - opencti-network
+
+  worker-2:
+    image: opencti/worker:6.7.5
+    container_name: opencti-worker-2
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f90}
+      - WORKER_LOG_LEVEL=info
+    depends_on:
+      opencti:
+        condition: service_healthy
+    restart: always
+    networks:
+      - opencti-network
+
+  worker-3:
+    image: opencti/worker:6.7.5
+    container_name: opencti-worker-3
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f90}
+      - WORKER_LOG_LEVEL=info
+    depends_on:
+      opencti:
+        condition: service_healthy
+    restart: always
+    networks:
+      - opencti-network
+
+  # ========================
+  # Export Connectors
+  # ========================
+  
+  connector-export-file-stix:
+    image: opencti/connector-export-file-stix:6.7.5
+    container_name: opencti-export-stix
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f90}
+      - CONNECTOR_ID=${CONNECTOR_EXPORT_FILE_STIX_ID:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f98}
+      - CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
+      - CONNECTOR_NAME=ExportFileStix2
+      - CONNECTOR_SCOPE=application/json
+      - CONNECTOR_LOG_LEVEL=info
+    restart: always
+    depends_on:
+      opencti:
+        condition: service_healthy
+    networks:
+      - opencti-network
+
+  connector-export-file-csv:
+    image: opencti/connector-export-file-csv:6.7.5
+    container_name: opencti-export-csv
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f90}
+      - CONNECTOR_ID=${CONNECTOR_EXPORT_FILE_CSV_ID:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f99}
+      - CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
+      - CONNECTOR_NAME=ExportFileCsv
+      - CONNECTOR_SCOPE=text/csv
+      - CONNECTOR_LOG_LEVEL=info
+    restart: always
+    depends_on:
+      opencti:
+        condition: service_healthy
+    networks:
+      - opencti-network
+
+  connector-export-file-txt:
+    image: opencti/connector-export-file-txt:6.7.5
+    container_name: opencti-export-txt
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f90}
+      - CONNECTOR_ID=${CONNECTOR_EXPORT_FILE_TXT_ID:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f9a}
+      - CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
+      - CONNECTOR_NAME=ExportFileTxt
+      - CONNECTOR_SCOPE=text/plain
+      - CONNECTOR_LOG_LEVEL=info
+    restart: always
+    depends_on:
+      opencti:
+        condition: service_healthy
+    networks:
+      - opencti-network
+
+  # ========================
+  # Import Connectors
+  # ========================
+  
+  connector-import-file-stix:
+    image: opencti/connector-import-file-stix:6.7.5
+    container_name: opencti-import-stix
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f90}
+      - CONNECTOR_ID=${CONNECTOR_IMPORT_FILE_STIX_ID:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f9b}
+      - CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
+      - CONNECTOR_NAME=ImportFileStix
+      - CONNECTOR_VALIDATE_BEFORE_IMPORT=true
+      - CONNECTOR_SCOPE=application/json,text/xml
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_LOG_LEVEL=info
+    restart: always
+    depends_on:
+      opencti:
+        condition: service_healthy
+    networks:
+      - opencti-network
+
+  connector-import-document:
+    image: opencti/connector-import-document:6.7.5
+    container_name: opencti-import-document
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f90}
+      - CONNECTOR_ID=${CONNECTOR_IMPORT_DOCUMENT_ID:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f9c}
+      - CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
+      - CONNECTOR_NAME=ImportDocument
+      - CONNECTOR_VALIDATE_BEFORE_IMPORT=true
+      - CONNECTOR_SCOPE=application/pdf,text/plain,text/html
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_ONLY_CONTEXTUAL=false
+      - CONNECTOR_LOG_LEVEL=info
+      - IMPORT_DOCUMENT_CREATE_INDICATOR=true
+    restart: always
+    depends_on:
+      opencti:
+        condition: service_healthy
+    networks:
+      - opencti-network
+
+  connector-analysis:
+    image: opencti/connector-import-document:6.7.5
+    container_name: opencti-analysis
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f90}
+      - CONNECTOR_ID=${CONNECTOR_ANALYSIS_ID:-dd817c8c-3123-4b18-a3b6-24f4d0ef8f9d}
+      - CONNECTOR_TYPE=INTERNAL_ANALYSIS
+      - CONNECTOR_NAME=ImportDocumentAnalysis
+      - CONNECTOR_VALIDATE_BEFORE_IMPORT=false
+      - CONNECTOR_SCOPE=application/pdf,text/plain,text/html
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_ONLY_CONTEXTUAL=false
+      - CONNECTOR_LOG_LEVEL=info
+    restart: always
+    depends_on:
+      opencti:
+        condition: service_healthy
+    networks:
+      - opencti-network
+
+volumes:
+  esdata:
+    driver: local
+  s3data:
+    driver: local
+  redisdata:
+    driver: local
+  amqpdata:
+    driver: local
+
+networks:
+  opencti-network:
+    driver: bridge
+    name: opencti-network

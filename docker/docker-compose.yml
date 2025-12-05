@@ -1,0 +1,432 @@
+networks:
+  cti-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  rabbitmq_data:
+  elasticsearch_data:
+  cti_logs:
+  cti_output:
+  mitre_data:  # ✅ Volume manquant ajouté
+
+services:
+  # CRITICAL: Init container to fix permissions
+  cti-init:
+    image: alpine:latest
+    container_name: cti-init
+    command: >
+      sh -c "
+        echo 'Setting up permissions for CTI volumes...';
+        mkdir -p /app/logs /app/output/alerts /app/output/daily_feeds /app/output/excel_reports /app/output/rapports /app/output/searches /app/output/tests;
+        chown -R 1000:1000 /app/logs /app/output;
+        chmod -R 777 /app/logs /app/output;
+        echo 'Permissions set successfully';
+        echo 'Creating test file to verify write access...';
+        touch /app/logs/init_test.log;
+        echo 'Init completed successfully';
+      "
+    volumes:
+      - cti_logs:/app/logs
+      - cti_output:/app/output
+    networks:
+      - cti-network
+
+  # Base Infrastructure
+  cti-mitre-enricher:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: cti-mitre-enricher
+    environment:
+      - PYTHONPATH=/app
+      - DB_HOST=cti-postgres
+      - DB_NAME=${DB_NAME:-cti_db}
+      - DB_USER=${DB_USER:-cti_user}
+      - DB_PASSWORD=${DB_PASSWORD:-cti_password}
+      - REDIS_HOST=cti-redis
+      - REDIS_PORT=6379
+      - OPENCTI_URL=http://opencti:8082
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+    volumes:
+      - mitre_data:/app/data
+      - cti_logs:/app/logs
+      - cti_output:/app/output
+      - ./config:/app/config:ro
+    depends_on:
+      cti-init:
+        condition: service_completed_successfully
+      cti-postgres:
+        condition: service_healthy
+      cti-redis:
+        condition: service_healthy
+      opencti:
+        condition: service_started
+    networks:
+      - cti-network
+    restart: unless-stopped
+    command: ["python", "-m", "scripts.pipeline.enrichers.mitre_attack_enricher"]
+
+  cti-ioc-enricher:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: cti-ioc-enricher
+    environment:
+      - PYTHONPATH=/app
+      - DB_HOST=cti-postgres
+      - DB_NAME=${DB_NAME:-cti_db}
+      - DB_USER=${DB_USER:-cti_user}
+      - DB_PASSWORD=${DB_PASSWORD:-cti_password}
+      - REDIS_HOST=cti-redis
+      - REDIS_PORT=6379
+      # Ajoutez vos clés API comme variables d'environnement
+      - VIRUSTOTAL_API_KEY=f4586010738cb3f099848d35833fe49ce719a316ad51e685fb2ecdc52dbc9ac9
+      - OTX_API_KEY=2270bc56efbaad5d916046b7fe7b4c0d453a789110df5e6c69c4a68cb4aaf461
+      - SHODAN_API_KEY=XnY797AXbIQJkJypDe9J1ef1lCfuA0sL
+      - ABUSE_CH_API_KEY=e16eabe6e75269a1733edbc1b5f550296df4e45f7e651b3b
+    command: ["python", "scripts/analyzers/ioc_enricher.py"]
+    volumes:
+      - cti_logs:/app/logs
+      - cti_output:/app/output
+      - ./config:/app/config:ro
+    depends_on:
+      cti-init:
+        condition: service_completed_successfully
+      cti-postgres:
+        condition: service_healthy
+      cti-redis:
+        condition: service_healthy
+    networks:
+      - cti-network
+
+  cti-postgres:
+    image: postgres:15
+    container_name: cti-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-cti_db}
+      POSTGRES_USER: ${DB_USER:-cti_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cti_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./utils/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - cti-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-cti_user} -d ${DB_NAME:-cti_db}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  cti-redis:
+    image: redis:7-alpine
+    container_name: cti-redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - cti-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # OpenCTI Infrastructure
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: opencti-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms${ELASTIC_MEMORY_SIZE:-2g} -Xmx${ELASTIC_MEMORY_SIZE:-2g}"
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - cti-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  minio:
+    image: minio/minio:latest
+    container_name: opencti-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-opencti}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-ChangeMe123!}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9002:9000"
+      - "9001:9001"
+    networks:
+      - cti-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: opencti-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-opencti}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-ChangeMe123!}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "25675:5672"
+      - "25673:15672"
+    networks:
+      - cti-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # OpenCTI Core
+  opencti:
+    image: opencti/platform:6.4.5
+    container_name: opencti-platform
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=8096
+      - APP__PORT=8080
+      - APP__BASE_URL=${OPENCTI_BASE_URL:-http://localhost:8082}
+      - APP__ADMIN__EMAIL=${OPENCTI_ADMIN_EMAIL:-admin@opencti.io}
+      - APP__ADMIN__PASSWORD=${OPENCTI_ADMIN_PASSWORD:-admin123}
+      - APP__ADMIN__TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - APP__APP_LOGS__LOGS_LEVEL=info
+      - REDIS__HOSTNAME=cti-redis
+      - REDIS__PORT=6379
+      - ELASTICSEARCH__URL=http://elasticsearch:9200
+      - MINIO__ENDPOINT=minio
+      - MINIO__PORT=9000
+      - MINIO__USE_SSL=false
+      - MINIO__ACCESS_KEY=${MINIO_ROOT_USER:-opencti}
+      - MINIO__SECRET_KEY=${MINIO_ROOT_PASSWORD:-ChangeMe123!}
+      - RABBITMQ__HOSTNAME=rabbitmq
+      - RABBITMQ__PORT=5672
+      - RABBITMQ__PORT_MANAGEMENT=15672
+      - RABBITMQ__MANAGEMENT_SSL=false
+      - RABBITMQ__USERNAME=${RABBITMQ_DEFAULT_USER:-opencti}
+      - RABBITMQ__PASSWORD=${RABBITMQ_DEFAULT_PASS:-ChangeMe123!}
+      - SMTP__HOSTNAME=${SMTP_HOSTNAME:-localhost}
+      - SMTP__PORT=${SMTP_PORT:-25}
+      - PROVIDERS__LOCAL__STRATEGY=LocalStrategy
+    ports:
+      - "8082:8080"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      cti-redis:
+        condition: service_healthy
+    networks:
+      - cti-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  # OpenCTI Workers
+  opencti-worker:
+    image: opencti/worker:6.4.5
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - WORKER_LOG_LEVEL=info
+    depends_on:
+      - opencti
+    deploy:
+      replicas: 2
+    networks:
+      - cti-network
+
+  # CTI Project Services
+  cti-collector:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: cti-collector
+    environment:
+      - PYTHONPATH=/app
+      - DB_HOST=cti-postgres
+      - DB_NAME=${DB_NAME:-cti_db}
+      - DB_USER=${DB_USER:-cti_user}
+      - DB_PASSWORD=${DB_PASSWORD:-cti_password}
+      - REDIS_HOST=cti-redis
+      - REDIS_PORT=6379
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+    command: ["python", "-m", "scripts.collectors.main_collector"]
+    volumes:
+      - cti_logs:/app/logs
+      - cti_output:/app/output
+      - ./config:/app/config:ro
+    depends_on:
+      cti-init:
+        condition: service_completed_successfully
+      cti-postgres:
+        condition: service_healthy
+      cti-redis:
+        condition: service_healthy
+      opencti:
+        condition: service_started
+    networks:
+      - cti-network
+    restart: unless-stopped
+
+  cti-analyzer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: cti-analyzer
+    environment:
+      - PYTHONPATH=/app
+      - DB_HOST=cti-postgres
+      - DB_NAME=${DB_NAME:-cti_db}
+      - DB_USER=${DB_USER:-cti_user}
+      - DB_PASSWORD=${DB_PASSWORD:-cti_password}
+      - REDIS_HOST=cti-redis
+      - REDIS_PORT=6379
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+    command: ["python", "-m", "scripts.analyzers.cve_analyzer"]
+    volumes:
+      - cti_logs:/app/logs
+      - cti_output:/app/output
+      - ./config:/app/config:ro
+    depends_on:
+      cti-init:
+        condition: service_completed_successfully
+      cti-postgres:
+        condition: service_healthy
+      cti-redis:
+        condition: service_healthy
+      opencti:
+        condition: service_started
+    networks:
+      - cti-network
+    restart: unless-stopped
+
+  cti-generator:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: cti-generator
+    environment:
+      - PYTHONPATH=/app
+      - DB_HOST=cti-postgres
+      - DB_NAME=${DB_NAME:-cti_db}
+      - DB_USER=${DB_USER:-cti_user}
+      - DB_PASSWORD=${DB_PASSWORD:-cti_password}
+      - REDIS_HOST=cti-redis
+      - REDIS_PORT=6379
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+    command: ["python", "-m", "scripts.generators.excel_generator"]
+    volumes:
+      - cti_logs:/app/logs
+      - cti_output:/app/output
+      - ./config:/app/config:ro
+    depends_on:
+      cti-init:
+        condition: service_completed_successfully
+      cti-postgres:
+        condition: service_healthy
+      cti-redis:
+        condition: service_healthy
+      opencti:
+        condition: service_started
+    networks:
+      - cti-network
+    restart: unless-stopped
+
+  cti-scheduler:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: cti-scheduler
+    environment:
+      - PYTHONPATH=/app
+      - DB_HOST=cti-postgres
+      - DB_NAME=${DB_NAME:-cti_db}
+      - DB_USER=${DB_USER:-cti_user}
+      - DB_PASSWORD=${DB_PASSWORD:-cti_password}
+      - REDIS_HOST=cti-redis
+      - REDIS_PORT=6379
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+    command: ["python", "-m", "scripts.pipeline.scheduler"]
+    volumes:
+      - cti_logs:/app/logs
+      - cti_output:/app/output
+      - ./config:/app/config:ro
+    depends_on:
+      cti-init:
+        condition: service_completed_successfully
+      cti-postgres:
+        condition: service_healthy
+      cti-redis:
+        condition: service_healthy
+      opencti:
+        condition: service_started
+    networks:
+      - cti-network
+    restart: unless-stopped
+
+  # Monitoring (optionnel)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cti-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - cti-network
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cti-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./config/grafana:/etc/grafana/provisioning
+    networks:
+      - cti-network
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring

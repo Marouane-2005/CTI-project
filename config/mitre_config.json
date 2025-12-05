@@ -1,0 +1,48 @@
+{
+    "update_frequency": "weekly",
+    "frameworks": ["enterprise-attack"],
+    "auto_mapping": true,
+    "confidence_threshold": 0.7,
+    "enable_subtechniques": true,
+    "mapping_keywords": {
+        "high_confidence": 0.9,
+        "medium_confidence": 0.7,
+        "low_confidence": 0.5
+    },
+    "technique_mappings": {
+        "T1059": {
+            "keywords": ["command", "script", "execution", "powershell", "cmd", "bash", "shell"],
+            "weight": 1.0
+        },
+        "T1055": {
+            "keywords": ["injection", "process", "dll", "memory", "hollowing"],
+            "weight": 0.9
+        },
+        "T1083": {
+            "keywords": ["file", "discovery", "enumerate", "directory", "listing"],
+            "weight": 0.8
+        },
+        "T1070": {
+            "keywords": ["log", "clear", "delete", "evidence", "cleanup", "wipe"],
+            "weight": 0.9
+        },
+        "T1105": {
+            "keywords": ["download", "upload", "transfer", "file", "copy"],
+            "weight": 0.8
+        },
+        "T1027": {
+            "keywords": ["obfuscated", "encoded", "encrypted", "packed", "base64"],
+            "weight": 0.8
+        }
+    },
+    "database": {
+        "path": "data/mitre/mitre_attack.db",
+        "cache_ttl": 3600,
+        "batch_size": 100
+    },
+    "api": {
+        "timeout": 30,
+        "retry_attempts": 3,
+        "rate_limit": 10
+    }
+}

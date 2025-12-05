@@ -1,0 +1,137 @@
+{
+  "opencti": {
+    "url": "http://localhost:8082",
+    "token": "dd817c8c-3123-4b18-a3b6-24f4d0ef8f90",
+    "log_level": "info",
+    "confidence_level": 3,
+    "update_existing_data": true,
+    "enabled": true,
+
+    "admin": {
+      "email": "admin@opencti.io",
+      "password": "admin123"
+    },
+    "healthcheck": {
+      "access_key": "healthcheck-key-123",
+      "endpoint": "/health"
+    },
+    "ssl_verify": false,
+    "timeout": 30
+  },
+  "database": {
+    "elasticsearch": {
+      "url": "http://localhost:9200",
+      "memory_size": "1G",
+      "replicas": 0
+    },
+    "redis": {
+      "hostname": "redis",
+      "port": 6379
+    
+    },
+    "minio": {
+      "endpoint": "minio",
+      "port": 9002,
+      "use_ssl": false,
+      "access_key": "opencti",
+      "secret_key": "ChangeMe123!"
+    },
+    "rabbitmq": {
+      "hostname": "rabbitmq",
+      "port": 5672,
+      "management_port": 15672,
+      "username": "opencti",
+      "password": "ChangeMe123!"
+    }
+  },
+  "connectors": {
+    "export": {
+      "stix": {
+        "id": "dd817c8c-3123-4b18-a3b6-24f4d0ef8f98",
+        "name": "ExportFileStix2",
+        "scope": "application/json",
+        "type": "INTERNAL_EXPORT_FILE"
+      },
+      "csv": {
+        "id": "dd817c8c-3123-4b18-a3b6-24f4d0ef8f99",
+        "name": "ExportFileCsv",
+        "scope": "text/csv",
+        "type": "INTERNAL_EXPORT_FILE"
+      },
+      "txt": {
+        "id": "dd817c8c-3123-4b18-a3b6-24f4d0ef8f9a",
+        "name": "ExportFileTxt",
+        "scope": "text/plain",
+        "type": "INTERNAL_EXPORT_FILE"
+      }
+    },
+    "import": {
+      "stix": {
+        "id": "dd817c8c-3123-4b18-a3b6-24f4d0ef8f9b",
+        "name": "ImportFileStix",
+        "scope": "application/pdf,text/plain,text/html",
+        "type": "INTERNAL_IMPORT_FILE",
+        "auto": true,
+        "validate_before_import": true
+      },
+      "document": {
+        "id": "dd817c8c-3123-4b18-a3b6-24f4d0ef8f9c",
+        "name": "ImportDocument",
+        "scope": "application/pdf,text/plain,text/html",
+        "type": "INTERNAL_IMPORT_FILE",
+        "auto": true,
+        "validate_before_import": true,
+        "only_contextual": false,
+        "create_indicator": true
+      },
+      "analysis": {
+        "id": "dd817c8c-3123-4b18-a3b6-24f4d0ef8f9d",
+        "name": "ImportDocumentAnalysis",
+        "scope": "application/pdf,text/plain,text/html",
+        "type": "INTERNAL_ANALYSIS",
+        "auto": true,
+        "validate_before_import": false,
+        "only_contextual": false
+      }
+    }
+  },
+  "workers": {
+    "replicas": 3,
+    "log_level": "info"
+  },
+  "smtp": {
+    "hostname": "localhost",
+    "port": 25
+  },
+  "logging": {
+    "app_logs_level": "error",
+    "connector_log_level": "info"
+  },
+  "security": {
+    "providers": {
+      "local": {
+        "strategy": "LocalStrategy"
+      }
+    }
+  },
+  "performance": {
+    "node_options": "--max-old-space-size=8096",
+    "elasticsearch": {
+      "thread_pool_search_queue_size": 5000
+    }
+  },
+  "api_endpoints": {
+    "graphql": "/graphql",
+    "rest": "/api",
+    "stream": "/stream"
+  },
+  "collection_settings": {
+    "batch_size": 100,
+    "retry_attempts": 3,
+    "retry_delay": 5,
+    "rate_limit": {
+      "requests_per_minute": 100,
+      "requests_per_hour": 1000
+    }
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "COLLECTION_CONFIG": {
+    "daily_schedule": "06:00",
+    "max_items_per_source": 1000,
+    "timeout_seconds": 30,
+    "retry_attempts": 3,
+    "retry_delay": 5
+  },
+  "general": {
+    "output_directory": "output/daily_feeds",
+    "log_level": "INFO",
+    "max_concurrent_collectors": 3
+  },
+  "collection": {
+    "timeout_seconds": 180,
+    "retry_attempts": 2,
+    "retry_delay": 30,
+    "enable_parallel_collection": true,
+    "conservative_mode": true
+  },
+  "RSS_CONFIG": {
+    "max_feeds": 50,
+    "update_interval_hours": 1,
+    "timeout": 30,
+    "user_agent": "CTI-Collector/1.0"
+  },
+  "rate_limits": {
+    "twitter": {
+      "requests_per_window": 40,
+      "window_seconds": 900,
+      "min_delay_between_requests": 30,
+      "max_retries": 2,
+      "backoff_multiplier": 2
+    },
+    "otx": {
+      "requests_per_minute": 10,
+      "burst_limit": 5
+    },
+    "rss": {
+      "requests_per_minute": 30,
+      "timeout": 30
+    },
+    "abuse_ch": {
+      "requests_per_minute": 20,
+      "timeout": 45
+    }
+  },
+  "TWITTER_CONFIG": {
+    "max_tweets": 100,
+    "languages": ["en", "fr"],
+    "exclude_retweets": true,
+    "exclude_replies": true
+  },
+  "twitter_specific": {
+    "max_keywords_per_run": 2,
+    "max_results_per_keyword": 15,
+    "enable_monitored_accounts": false,
+    "enable_trending_collection": false,
+    "wait_between_keywords": 120,
+    "priority_keywords": ["ransomware", "malware"],
+    "query_modifiers": ["-is:retweet", "-is:reply", "lang:en", "min_retweets:1"]
+  },
+  "storage": {
+    "compress_output": false,
+    "keep_raw_data": true,
+    "max_file_size_mb": 50
+  },
+  "monitoring": {
+    "enable_metrics": true,
+    "log_api_calls": true,
+    "track_rate_limits": true
+  },
+  "TELEGRAM_CONFIG": {
+    "max_messages": 50,
+    "session_name": "cti_session",
+    "timeout": 30
+  },
+  "OTX_CONFIG": {
+    "max_pulses": 100,
+    "modified_since_hours": 168,
+    "min_pulse_score": 0.0
+  },
+  "ANALYSIS_CONFIG": {
+    "cve_critical_score": 9.0,
+    "cve_high_score": 7.0,
+    "ioc_confidence_threshold": 0.7,
+    "max_enrichment_requests": 1000,
+    "virustotal_delay": 15
+  },
+  "ALERT_CONFIG": {
+    "high_severity_keywords": [
+      "zero-day", "0day", "ransomware", "apt",
+      "data breach", "critical vulnerability",
+      "remote code execution", "rce"
+    ],
+    "medium_severity_keywords": [
+      "phishing", "malware", "trojan",
+      "botnet", "exploit", "vulnerability"
+    ],
+    "excluded_keywords": [
+      "test", "demo", "false positive"
+    ]
+  },
+  "LOGGING_CONFIG": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "date_format": "%Y-%m-%d %H:%M:%S",
+    "max_file_size_mb": 10,
+    "backup_count": 5,
+    "console_output": true
+  },
+  "SECURITY_CONFIG": {
+    "api_rate_limit": 100,
+    "max_file_size_mb": 50,
+    "allowed_file_types": [".json", ".xml", ".csv", ".txt"],
+    "sanitize_input": true,
+    "validate_ssl": true
+  },
+  "PATHS": {
+    "output_dir": "output",
+    "logs_dir": "logs",
+    "config_dir": "config"
+  }
+}

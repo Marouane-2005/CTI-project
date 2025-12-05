@@ -1,0 +1,38 @@
+{
+  "opencti": {
+    "url": "http://opencti:8080",
+    "token": "dd817c8c-3123-4b18-a3b6-24f4d0ef8f90",
+    "log_level": "info",
+    "confidence_level": 3,
+    "update_existing_data": true,
+    "force_refresh": false,
+    "smart_update": true,
+    "cleanup_before_sync": false,
+    "batch_size": 50,
+    "enabled": true
+  },
+  "mitre": {
+    "update_frequency": "weekly",
+    "frameworks": ["enterprise-attack"],
+    "auto_mapping": true,
+    "confidence_threshold": 0.7,
+    "enable_subtechniques": true
+  },
+  "mapping": {
+    "cve_techniques": {
+      "enabled": true,
+      "confidence_threshold": 0.6,
+      "max_techniques_per_cve": 10
+    },
+    "ioc_techniques": {
+      "enabled": true,
+      "confidence_threshold": 0.5,
+      "max_techniques_per_ioc": 5
+    }
+  },
+  "sync_settings": {
+    "batch_size": 50,
+    "parallel_requests": 3,
+    "rate_limit_delay": 1
+  }
+}

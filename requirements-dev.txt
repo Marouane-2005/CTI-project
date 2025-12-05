@@ -1,0 +1,48 @@
+# ================================
+# Dépendances de développement
+# ================================
+
+# Tests et couverture de code
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-asyncio==0.21.1
+
+# Formatage et linting
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+mypy==1.7.1
+PyYAML==5.4.1
+bandit==1.7.5
+
+# Documentation
+sphinx==7.2.6
+sphinx-rtd-theme==1.3.0
+
+# Debugging
+ipdb==0.13.13
+
+# Performance
+memory-profiler==0.61.0
+line-profiler==4.1.1
+
+# Mock et stubs
+responses==0.24.1
+factory-boy==3.3.0
+
+# Pre-commit hooks
+pre-commit==3.6.0
+
+# Docker development
+docker-compose==1.29.2
+
+# Environment management
+python-dotenv==1.0.0
+
+# API testing
+httpx==0.25.2
+
+# Database testing
+pytest-postgresql==5.0.0
+pytest-redis==3.0.2

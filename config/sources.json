@@ -1,0 +1,56 @@
+{
+  "rss_feeds": [
+    {
+      "name": "CERT-FR",
+      "url": "https://www.cert.ssi.gouv.fr/feed/",
+      "category": "governmental"
+    },
+    {
+      "name": "ANSSI",
+      "url": "https://www.ssi.gouv.fr/feed/",
+      "category": "governmental"
+    },
+    {
+      "name": "The Hacker News",
+      "url": "https://thehackernews.com/feeds/posts/default",
+      "category": "news"
+    },
+    {
+      "name": "BleepingComputer",
+      "url": "https://www.bleepingcomputer.com/feed/",
+      "category": "news"
+    },
+    {
+      "name": "CISA",
+      "url": "https://www.cisa.gov/cybersecurity-advisories/all.xml",
+      "category": "governmental"
+    }
+  ],
+  "twitter_accounts": [
+    "malware_traffic",
+    "VK_Intel",
+    "TheDFIRReport",
+    "campuscodi",
+    "Orange_Cyberdef",
+    "MalwareHunterTeam",
+    "CISA",
+    "CybercrimeUnit"
+  ],
+  "threat_keywords": [
+    "cybersecurity",
+    "malware",
+    "ransomware",
+    "apt",
+    "threatintel",
+    "vulnerability",
+    "breach",
+    "phishing",
+    "zeroday"
+  ],
+  "telegram_channels": [
+    "@cyberthreatintel",
+    "@malware_research",
+    "@cve_alerts",
+    "@ransomware_feeds"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "feeds": [
+    {
+      "name": "MalwareBazaar",
+      "url": "https://bazaar.abuse.ch/export/csv/recent/",
+      "active": true
+    },
+    {
+      "name": "URLhaus",
+      "url": "https://urlhaus.abuse.ch/downloads/csv_recent/",
+      "active": true
+    }
+  ],
+  "auth_key": "e16eabe6e75269a1733edbc1b5f550296df4e45f7e651b3b"
+}

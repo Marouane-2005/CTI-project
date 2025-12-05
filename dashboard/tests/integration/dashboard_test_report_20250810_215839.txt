@@ -1,0 +1,74 @@
+
+🔍 RAPPORT DE TEST DÉTAILLÉ - CTI DASHBOARD
+======================================================================
+
+📊 RÉSUMÉ GÉNÉRAL
+• Date/Heure: 2025-08-10 21:58:39
+• URL Backend: http://localhost:5001
+• Tests exécutés: 5
+• Tests réussis: 3 ✅
+• Tests échoués: 2 ❌
+• Taux de réussite: 60.0%
+
+🏥 ÉTAT DU SERVEUR
+• Serveur accessible: ✅
+• Endpoints fonctionnels: 4
+• Endpoints en échec: 2
+
+✅ Endpoints fonctionnels:
+   • /
+   • /api/dashboard/overview
+   • /api/dashboard/threats/live
+   • /api/dashboard/alerts
+
+❌ Endpoints en échec:
+   • /api/dashboard/stats (500)
+   • /api/dashboard/mitre/overview (500)
+
+🎯 PERFORMANCE
+• Endpoints testés: 4
+• Requêtes réussies: 2
+• Temps total: 0.02s
+• Taux de succès: 50.0%
+• Temps moyen: 4.8ms
+
+📋 DÉTAIL DES TESTS
+
+✅ DASHBOARD_OVERVIEW_TEST
+   Endpoint: GET /api/dashboard/overview
+   Status: 200
+   Temps: 9.92ms
+   Réponse: message, status
+
+❌ DASHBOARD_STATS_TEST
+   Endpoint: GET /api/dashboard/stats
+   Status: 500
+   Temps: 6.75ms
+   Erreur: HTTP 500
+
+❌ MITRE_OVERVIEW_TEST
+   Endpoint: GET /api/dashboard/mitre/overview
+   Status: 500
+   Temps: 5.95ms
+   Erreur: HTTP 500
+
+✅ IOC_SEARCH_TEST
+   Endpoint: POST /api/dashboard/iocs/search
+   Status: 200
+   Temps: 14.52ms
+   Réponse: indicators, total
+
+✅ ALERTS_RETRIEVAL_TEST
+   Endpoint: GET /api/dashboard/alerts
+   Status: 200
+   Temps: 9.2ms
+   Réponse: alerts, total
+
+======================================================================
+🔧 RECOMMANDATIONS
+
+⚠️ PERFORMANCE: Taux de succès bas
+   • Vérifiez la charge du serveur
+   • Augmentez les timeouts
+
+Rapport généré le: 2025-08-10 21:58:39

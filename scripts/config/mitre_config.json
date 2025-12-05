@@ -1,0 +1,17 @@
+{
+    "opencti": {
+        "url": "http://opencti:8080",
+        "token": "dd817c8c-3123-4b18-a3b6-24f4d0ef8f90",
+        "log_level": "info",
+        "confidence_level": 3,
+        "update_existing_data": true,
+        "enabled": true
+    },
+    "mitre": {
+        "update_frequency": "weekly",
+        "frameworks": ["enterprise-attack"],
+        "auto_mapping": true,
+        "confidence_threshold": 0.3,
+        "enable_subtechniques": true
+    }
+}

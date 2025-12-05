@@ -1,0 +1,36 @@
+{
+  "database": {
+    "host": "cti-postgres",
+    "port": 5432,
+    "database": "cti_db",
+    "user": "cti_user",
+    "password": "cti_password",
+    "ssl_mode": "prefer"
+  },
+  "redis": {
+    "host": "cti-redis", 
+    "port": 6379,
+    "db": 0,
+    "password": null
+  },
+  "websocket": {
+    "cors_origins": ["http://localhost:8080", "http://localhost:8083", "http://localhost:8084"],
+    "transport_methods": ["polling", "websocket"],
+    "ping_timeout": 60000,
+    "ping_interval": 25000
+  },
+  "alerts": {
+    "critical_ioc_threshold": 8.0,
+    "suspicious_pattern_count": 5,
+    "geo_anomaly_threshold": 3,
+    "new_campaign_indicators": 3,
+    "mitre_technique_frequency": 10,
+    "time_window_minutes": 60
+  },
+  "security": {
+    "suspicious_countries": ["CN", "RU", "IR", "KP", "BY", "SY"],
+    "max_risk_score": 10.0,
+    "confidence_weight": 0.3,
+    "geo_weight": 0.25
+  }
+}
