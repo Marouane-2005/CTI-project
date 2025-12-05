@@ -43,14 +43,14 @@ jobs:
           docker-compose -f docker-compose.yml push || echo "Skipping push if not needed"
 
       # 7️⃣ Déployer sur VPS via SSH
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v0.1.9
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd /home/devops/cti-project || mkdir -p /home/devops/cti-project
-            git pull origin main
-            docker-compose -f docker-compose.yml down
-            docker-compose -f docker-compose.yml up -d --build
+     # - name: Deploy to VPS
+      #  uses: appleboy/ssh-action@v0.1.9
+        #with:
+          #host: ${{ secrets.VPS_HOST }}
+          #username: ${{ secrets.VPS_USER }}
+          #key: ${{ secrets.VPS_SSH_KEY }}
+          #script: |
+           # cd /home/devops/cti-project || mkdir -p /home/devops/cti-project
+          #  git pull origin main
+            #docker-compose -f docker-compose.yml down
+            #docker-compose -f docker-compose.yml up -d --build
