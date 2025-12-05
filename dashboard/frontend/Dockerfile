@@ -1,119 +1,72 @@
-# dashboard/frontend/Dockerfile
-FROM node:18-alpine as build-stage
+# dashboard/frontend/Dockerfile - Version simplifiée et robuste
+FROM node:18-alpine as builder
 
-# Étape cruciale : Travailler en tant que root pour éviter les problèmes de permissions
+# Travail en root pour éviter tous les problèmes de permissions
 USER root
 
 WORKDIR /app
 
-# 1. Copier uniquement les fichiers de dépendances
+# 1. Installation des dépendances
 COPY package*.json ./
 
-# 2. Installer Vue CLI globalement et localement
-RUN echo "Installing Vue CLI..." && \
-    npm install -g @vue/cli-service --unsafe-perm && \
-    # Installer les dépendances du projet
-    npm ci --unsafe-perm && \
-    # S'assurer que vue-cli-service est accessible
-    ln -sf /usr/local/bin/vue-cli-service ./node_modules/.bin/vue-cli-service || true && \
-    # Donner les permissions d'exécution à TOUS les binaires
-    chmod -R +x ./node_modules/.bin/ 2>/dev/null || true && \
+# FORCER l'installation avec toutes les permissions
+RUN npm config set unsafe-perm true && \
+    npm install --legacy-peer-deps && \
+    # Installer Vue CLI globalement
+    npm install -g @vue/cli-service
+
+# 2. Vérification CRITIQUE
+RUN echo "=== VÉRIFICATION CRITIQUE ===" && \
+    # Vérifier que vue-cli-service est exécutable
+    ls -la /usr/local/bin/vue-cli-service && \
     chmod +x /usr/local/bin/vue-cli-service && \
-    # Vérifier l'installation
-    echo "Vue CLI version:" && \
-    vue-cli-service --version
+    # Tester la commande
+    vue-cli-service --version && \
+    echo "✅ Vue CLI est prêt"
 
-# 3. Vérification détaillée
-RUN echo "=== VÉRIFICATION DES PERMISSIONS ===" && \
-    echo "Recherche de vue-cli-service:" && \
-    find / -name "*vue-cli-service*" 2>/dev/null | head -5 && \
-    echo "" && \
-    echo "Permissions de node_modules/.bin:" && \
-    ls -la ./node_modules/.bin/ 2>/dev/null || echo "Aucun dossier .bin trouvé" && \
-    echo "" && \
-    echo "Chemin PATH:" && \
-    echo $PATH
-
-# 4. Copier le code source AVANT le build
+# 3. Copie du code source
 COPY . .
 
-# 5. Vérifier la structure du projet
-RUN echo "=== STRUCTURE DU PROJET ===" && \
-    ls -la && \
-    echo "" && \
-    echo "Contenu de src/:" && \
-    ls -la src/ 2>/dev/null || echo "⚠️ Dossier src/ non trouvé!" && \
-    echo "" && \
-    echo "Scripts disponibles:" && \
-    npm run
+# 4. Vérification du projet
+RUN echo "=== PROJET VUE.JS ===" && \
+    # Vérifier la structure Vue
+    if [ -d "src" ]; then \
+        echo "✅ Structure Vue.js détectée"; \
+        echo "Fichiers dans src/:"; \
+        ls -la src/ | head -10; \
+    else \
+        echo "❌ Structure Vue.js NON détectée!"; \
+        echo "Structure actuelle:"; \
+        ls -la; \
+        exit 1; \
+    fi
 
-# 6. EXÉCUTION DU BUILD avec npx pour éviter les problèmes de chemin
-RUN echo "=== DÉMARRAGE DU BUILD ===" && \
-    # Essayer avec npx d'abord (plus fiable)
-    npx vue-cli-service build || { \
-        echo "⚠️ npx a échoué, tentative avec le chemin direct..." && \
-        # Essayer le chemin local
-        ./node_modules/.bin/vue-cli-service build || { \
-            echo "⚠️ Chemin local a échoué, tentative avec global..." && \
-            # Essayer le chemin global
-            /usr/local/bin/vue-cli-service build || { \
-                echo "❌ TOUTES LES TENTATIVES ONT ÉCHOUÉ" && \
-                echo "Debug info:" && \
-                echo "1. which vue-cli-service:" && \
-                which vue-cli-service || echo "Non trouvé dans PATH" && \
-                echo "2. Recherche étendue:" && \
-                find /app -type f -name "*vue*" 2>/dev/null | head -10 && \
-                echo "3. Test de vue-cli-service:" && \
-                vue-cli-service --version || echo "Commande non disponible" && \
-                exit 1; \
-            }; \
-        }; \
-    }
+# 5. BUILD avec commande directe (plus fiable que npm run)
+RUN echo "=== LANCEMENT DU BUILD ===" && \
+    # Utiliser directement vue-cli-service
+    vue-cli-service build --mode production
 
-# 7. Vérifier le résultat du build
-RUN echo "=== VÉRIFICATION DU BUILD ===" && \
-    echo "Contenu du dossier dist/:" && \
+# 6. Vérification du résultat
+RUN echo "=== BUILD TERMINÉ ===" && \
+    echo "Contenu de dist/:" && \
     ls -la dist/ && \
-    echo "" && \
-    echo "Taille du build:" && \
-    du -sh dist/
+    [ -f "dist/index.html" ] && echo "✅ index.html généré" || echo "❌ index.html MANQUANT!"
 
-# 8. Stage de production avec Nginx
-FROM nginx:alpine as production-stage
+# 7. Production avec Nginx
+FROM nginx:alpine
 
-# Copie des fichiers buildés
-COPY --from=build-stage /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Configuration Nginx optimisée pour Vue.js
-RUN echo 'server {
-    listen 80;
-    server_name _;
-    root /usr/share/nginx/html;
-    index index.html;
-    
-    # Compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-    
-    # Cache des assets statiques
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-    
-    # Vue Router history mode
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-    
-    # Health check
-    location /health {
-        return 200 "healthy\n";
-        add_header Content-Type text/plain;
-    }
-}' > /etc/nginx/conf.d/default.conf
+# Configuration Nginx minimaliste et fonctionnelle
+RUN rm /etc/nginx/conf.d/default.conf && \
+    echo 'server {
+        listen 80;
+        root /usr/share/nginx/html;
+        index index.html;
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }' > /etc/nginx/conf.d/app.conf
 
 EXPOSE 80
 
