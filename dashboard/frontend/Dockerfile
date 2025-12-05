@@ -1,72 +1,42 @@
-# dashboard/frontend/Dockerfile - Version simplifiée et robuste
-FROM node:18-alpine as builder
-
-# Travail en root pour éviter tous les problèmes de permissions
-USER root
+# dashboard/frontend/Dockerfile
+FROM node:18-alpine as build-stage
 
 WORKDIR /app
 
-# 1. Installation des dépendances
-COPY package*.json ./
+# Copie uniquement package.json d'abord
+COPY package.json ./
 
-# FORCER l'installation avec toutes les permissions
-RUN npm config set unsafe-perm true && \
-    npm install --legacy-peer-deps && \
-    # Installer Vue CLI globalement
-    npm install -g @vue/cli-service
+# Génère le package-lock.json et installe les dépendances
+RUN npm install --package-lock-only && \
+    npm ci --only=production
 
-# 2. Vérification CRITIQUE
-RUN echo "=== VÉRIFICATION CRITIQUE ===" && \
-    # Vérifier que vue-cli-service est exécutable
-    ls -la /usr/local/bin/vue-cli-service && \
-    chmod +x /usr/local/bin/vue-cli-service && \
-    # Tester la commande
-    vue-cli-service --version && \
-    echo "✅ Vue CLI est prêt"
+# Alternative: si vous avez déjà un package-lock.json valide
+# COPY package*.json ./
+# RUN npm ci --only=production
 
-# 3. Copie du code source
+# Copie le reste du code source
 COPY . .
 
-# 4. Vérification du projet
-RUN echo "=== PROJET VUE.JS ===" && \
-    # Vérifier la structure Vue
-    if [ -d "src" ]; then \
-        echo "✅ Structure Vue.js détectée"; \
-        echo "Fichiers dans src/:"; \
-        ls -la src/ | head -10; \
-    else \
-        echo "❌ Structure Vue.js NON détectée!"; \
-        echo "Structure actuelle:"; \
-        ls -la; \
-        exit 1; \
-    fi
+# Vérification de la structure avant build
+RUN echo "=== Vérification de la structure ===" && \
+    ls -la && \
+    echo "=== Contenu src/ ===" && \
+    ls -la src/ 2>/dev/null || echo "Dossier src/ manquant!" && \
+    echo "=== Vérification des fichiers critiques ===" && \
+    test -f src/main.js && echo "✅ main.js présent" || echo "❌ main.js manquant" && \
+    test -f src/App.vue && echo "✅ App.vue présent" || echo "❌ App.vue manquant"
 
-# 5. BUILD avec commande directe (plus fiable que npm run)
-RUN echo "=== LANCEMENT DU BUILD ===" && \
-    # Utiliser directement vue-cli-service
-    vue-cli-service build --mode production
+# Construction de l'application
+RUN npm run build
 
-# 6. Vérification du résultat
-RUN echo "=== BUILD TERMINÉ ===" && \
-    echo "Contenu de dist/:" && \
-    ls -la dist/ && \
-    [ -f "dist/index.html" ] && echo "✅ index.html généré" || echo "❌ index.html MANQUANT!"
+# Stage de production avec Nginx
+FROM nginx:alpine as production-stage
 
-# 7. Production avec Nginx
-FROM nginx:alpine
+# Copie des fichiers buildés
+COPY --from=build-stage /app/dist /usr/share/nginx/html
 
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Configuration Nginx minimaliste et fonctionnelle
-RUN rm /etc/nginx/conf.d/default.conf && \
-    echo 'server {
-        listen 80;
-        root /usr/share/nginx/html;
-        index index.html;
-        location / {
-            try_files $uri $uri/ /index.html;
-        }
-    }' > /etc/nginx/conf.d/app.conf
+# Configuration Nginx pour SPA
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
