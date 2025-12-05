@@ -1,83 +1,42 @@
-# dashboard/frontend/Dockerfile - Version optimisée
-FROM node:18-alpine as builder
+# dashboard/frontend/Dockerfile
+FROM node:18-alpine as build-stage
 
 WORKDIR /app
 
-# Étape 1: Installer Vue CLI globalement pour éviter les problèmes de permissions
-RUN npm install -g @vue/cli-service --unsafe-perm && \
-    echo "Vue CLI version: $(vue-cli-service --version)"
+# Copie uniquement package.json d'abord
+COPY package.json ./
 
-# Étape 2: Copier et installer les dépendances du projet
-COPY package*.json ./
+# Génère le package-lock.json et installe les dépendances
+RUN npm install --package-lock-only && \
+    npm ci --only=production
 
-# Installer toutes les dépendances (production + développement)
-RUN npm ci --unsafe-perm && \
-    # Créer un lien symbolique pour s'assurer que vue-cli-service est accessible
-    ln -sf /usr/local/bin/vue-cli-service ./node_modules/.bin/vue-cli-service || true && \
-    # Donner les permissions d'exécution
-    chmod +x ./node_modules/.bin/* 2>/dev/null || true
+# Alternative: si vous avez déjà un package-lock.json valide
+# COPY package*.json ./
+# RUN npm ci --only=production
 
-# Étape 3: Copier le code source
+# Copie le reste du code source
 COPY . .
 
-# Étape 4: Vérifier la configuration
-RUN echo "=== Configuration Vérifiée ===" && \
-    echo "Structure du projet:" && \
-    find . -maxdepth 2 -type f -name "*.js" -o -name "*.vue" -o -name "*.json" | head -20 && \
-    echo "" && \
-    echo "Scripts disponibles:" && \
-    npm run
+# Vérification de la structure avant build
+RUN echo "=== Vérification de la structure ===" && \
+    ls -la && \
+    echo "=== Contenu src/ ===" && \
+    ls -la src/ 2>/dev/null || echo "Dossier src/ manquant!" && \
+    echo "=== Vérification des fichiers critiques ===" && \
+    test -f src/main.js && echo "✅ main.js présent" || echo "❌ main.js manquant" && \
+    test -f src/App.vue && echo "✅ App.vue présent" || echo "❌ App.vue manquant"
 
-# Étape 5: Build l'application
-RUN npm run build || { \
-    echo "=== DEBUG INFORMATION ==="; \
-    echo "1. Checking vue-cli-service:"; \
-    which vue-cli-service || echo "Not in PATH"; \
-    find /app -name "*vue-cli-service*" 2>/dev/null; \
-    echo ""; \
-    echo "2. Node modules bin directory:"; \
-    ls -la /app/node_modules/.bin/ 2>/dev/null || echo "No .bin directory"; \
-    echo ""; \
-    echo "3. Trying direct vue-cli-service call:"; \
-    npx vue-cli-service build 2>&1 | head -50 || echo "npx failed"; \
-    exit 1; \
-}
+# Construction de l'application
+RUN npm run build
 
-# Étape 6: Production avec Nginx
-FROM nginx:alpine
+# Stage de production avec Nginx
+FROM nginx:alpine as production-stage
 
-# Copier les fichiers construits
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copie des fichiers buildés
+COPY --from=build-stage /app/dist /usr/share/nginx/html
 
-# Configuration Nginx optimisée pour Vue.js
-RUN echo 'server { \
-    listen 80; \
-    server_name localhost; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    \
-    # Compression Gzip \
-    gzip on; \
-    gzip_vary on; \
-    gzip_min_length 1024; \
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json; \
-    \
-    # Headers de sécurité \
-    add_header X-Frame-Options "SAMEORIGIN" always; \
-    add_header X-Content-Type-Options "nosniff" always; \
-    add_header X-XSS-Protection "1; mode=block" always; \
-    \
-    # Cache pour les assets statiques \
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { \
-        expires 1y; \
-        add_header Cache-Control "public, immutable"; \
-    } \
-    \
-    # Gestion du mode history de Vue Router \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+# Configuration Nginx pour SPA
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
