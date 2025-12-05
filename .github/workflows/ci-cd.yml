@@ -28,12 +28,12 @@ jobs:
 
       #  Build toutes les images Docker
       - name: Build Docker images
-        run: docker-compose -f docker-compose.yml build --pull
+        run: docker compose -f docker-compose.yml build --pull
 
       #  Push images sur DockerHub (optionnel)
       - name: Push Docker images
         run: |
-          docker-compose -f docker-compose.yml push || echo "Skipping push if not needed"
+          docker compose -f docker-compose.yml push || echo "Skipping push if not needed"
 
       #  Déployer sur VPS via SSH
      # - name: Deploy to VPS
